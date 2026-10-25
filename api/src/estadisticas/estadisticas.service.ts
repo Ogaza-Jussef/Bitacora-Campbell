@@ -4,6 +4,14 @@ import { DatabaseService } from '../database/database.service';
 
 export type Punto = { etiqueta: string; total: number };
 
+export type PeriodoAnterior = {
+  hoy: number;
+  semana: number;
+  mes: number;
+  anio: number;
+  treinta: number;
+};
+
 export type Estadisticas = {
   total: number;
   hoy: number;
@@ -11,6 +19,7 @@ export type Estadisticas = {
   mes: number;
   anio: number;
   fecha: string;
+  anterior: PeriodoAnterior;
   porDia: Punto[];
   porSemana: Punto[];
   porMes: Punto[];
@@ -26,6 +35,11 @@ type Conteo = RowDataPacket & {
   semana: number;
   mes: number;
   anio: number;
+  hoy_anterior: number;
+  semana_anterior: number;
+  mes_anterior: number;
+  anio_anterior: number;
+  treinta_anterior: number;
   fecha: string;
 };
 
@@ -40,9 +54,15 @@ export class EstadisticasService {
       SELECT CURDATE() AS fecha,
              COUNT(*) AS total,
              COALESCE(SUM(fecha_solicitud = CURDATE()), 0) AS hoy,
+             COALESCE(SUM(fecha_solicitud = DATE_SUB(CURDATE(), INTERVAL 1 DAY)), 0) AS hoy_anterior,
              COALESCE(SUM(YEARWEEK(fecha_solicitud, 3) = YEARWEEK(CURDATE(), 3)), 0) AS semana,
+             COALESCE(SUM(YEARWEEK(fecha_solicitud, 3) = YEARWEEK(DATE_SUB(CURDATE(), INTERVAL 1 WEEK), 3)), 0) AS semana_anterior,
              COALESCE(SUM(DATE_FORMAT(fecha_solicitud, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')), 0) AS mes,
-             COALESCE(SUM(YEAR(fecha_solicitud) = YEAR(CURDATE())), 0) AS anio
+             COALESCE(SUM(DATE_FORMAT(fecha_solicitud, '%Y-%m') = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m')), 0) AS mes_anterior,
+             COALESCE(SUM(YEAR(fecha_solicitud) = YEAR(CURDATE())), 0) AS anio,
+             COALESCE(SUM(YEAR(fecha_solicitud) = YEAR(CURDATE()) - 1), 0) AS anio_anterior,
+             COALESCE(SUM(fecha_solicitud >= DATE_SUB(CURDATE(), INTERVAL 59 DAY)
+                          AND fecha_solicitud < DATE_SUB(CURDATE(), INTERVAL 29 DAY)), 0) AS treinta_anterior
       FROM soportes
     `);
     const fecha = String(conteo?.fecha ?? '').slice(0, 10);
@@ -102,6 +122,13 @@ export class EstadisticasService {
       mes: Number(conteo?.mes ?? 0),
       anio: Number(conteo?.anio ?? 0),
       fecha,
+      anterior: {
+        hoy: Number(conteo?.hoy_anterior ?? 0),
+        semana: Number(conteo?.semana_anterior ?? 0),
+        mes: Number(conteo?.mes_anterior ?? 0),
+        anio: Number(conteo?.anio_anterior ?? 0),
+        treinta: Number(conteo?.treinta_anterior ?? 0),
+      },
       porDia: completarDias(porDia, fecha, 30),
       porSemana,
       porMes,

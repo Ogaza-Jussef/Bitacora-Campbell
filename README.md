@@ -16,6 +16,7 @@ npm run dev
 ```
 
 4. Abre http://localhost:5173 e inicia sesión con el correo y la contraseña `APP_ADMIN_*` del `.env`.
+5. En la misma conexión de Workbench, ejecuta `database/002-mantenimientos.sql` para crear equipos y los mantenimientos preventivos y correctivos. El script es idempotente.
 
 Si clonas el repo en otra máquina, copia `.env.example` a `.env`, cambia los secretos y vuelve a generar el SQL:
 
@@ -43,5 +44,16 @@ Prefijo `/api/v1`.
 | GET | `/soportes/:id/pdf` | sesión, PDF de un soporte |
 | GET | `/estadisticas` | sesión, tablero |
 | GET | `/areas` y `/tecnicos` | sesión |
+| GET | `/equipos` | sesión, búsqueda |
+| POST | `/equipos` | sesión, crea un equipo |
+| GET | `/mantenimientos/resumen` | sesión, cifras del tablero |
+| GET | `/mantenimientos/preventivos` | sesión, paginado |
+| POST | `/mantenimientos/preventivos` | sesión, acepta `Idempotency-Key` |
+| PUT | `/mantenimientos/preventivos/:id` | sesión, exige `If-Match` |
+| DELETE | `/mantenimientos/preventivos/:id` | solo `admin`, exige `If-Match` |
+| GET | `/mantenimientos/correctivos` | sesión, paginado |
+| POST | `/mantenimientos/correctivos` | sesión, acepta `Idempotency-Key` |
+| PUT | `/mantenimientos/correctivos/:id` | sesión, exige `If-Match` |
+| DELETE | `/mantenimientos/correctivos/:id` | solo `admin`, exige `If-Match` |
 
 El usuario `bitacora_admin` tiene todos los privilegios sobre la base `bitacora_campbell`. No es administrador de todo el servidor MySQL.

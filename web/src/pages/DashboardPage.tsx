@@ -109,6 +109,7 @@ export function DashboardPage() {
             <div className="span-12">
               <RankingBarras titulo="Por técnico" descripcion="Ranking de soportes atendidos." puntos={data.porTecnico.filter((punto) => punto.total > 0)} total={data.total} animar={animar} />
             </div>
+            <MantenimientoResumen />
           </div>
         ) : null}
       </main>
@@ -118,6 +119,42 @@ export function DashboardPage() {
 
 function topSerie(puntos: Punto[]): Punto[] {
   return [...puntos].filter((punto) => punto.total > 0).slice(0, 8).reverse();
+}
+
+function MantenimientoResumen() {
+  const [datos, setDatos] = useState<{
+    preventivos: { programados: number; realizados: number; noRealizados: number; cumplimiento: number };
+    correctivos: { abiertos: number; resueltos: number };
+  } | null>(null);
+  const [falla, setFalla] = useState('');
+
+  useEffect(() => {
+    api<{
+      preventivos: { programados: number; realizados: number; noRealizados: number; cumplimiento: number };
+      correctivos: { abiertos: number; resueltos: number };
+    }>('/api/v1/mantenimientos/resumen')
+      .then(setDatos)
+      .catch((caught) => setFalla(caught instanceof ApiError ? caught.message : 'No se pudieron cargar los mantenimientos'));
+  }, []);
+
+  if (falla) return <p className="alert span-12" role="alert">{falla}</p>;
+  if (!datos) return null;
+  return (
+    <>
+      <article className="chart-card span-6" aria-label="Preventivos del mes">
+        <h2>Preventivos del mes</h2>
+        <p className="meta">Programados {numero.format(datos.preventivos.programados)} · Realizados {numero.format(datos.preventivos.realizados)} · No realizados {numero.format(datos.preventivos.noRealizados)}</p>
+        <p className="kpi-valor">{numero.format(datos.preventivos.cumplimiento)}%</p>
+        <p className="meta">Cumplimiento del mes</p>
+      </article>
+      <article className="chart-card span-6" aria-label="Correctivos abiertos y resueltos">
+        <h2>Correctivos</h2>
+        <p className="meta">Abiertos {numero.format(datos.correctivos.abiertos)} · Resueltos {numero.format(datos.correctivos.resueltos)}</p>
+        <p className="kpi-valor">{numero.format(datos.correctivos.abiertos)}</p>
+        <p className="meta">Abiertos ahora</p>
+      </article>
+    </>
+  );
 }
 
 function Skeleton() {

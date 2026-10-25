@@ -16,6 +16,8 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
         <nav aria-label="Secciones">
           <NavLink to="/" end>Registros</NavLink>
+          <NavLink to="/preventivo">Preventivo</NavLink>
+          <NavLink to="/correctivo">Correctivo</NavLink>
           <NavLink to="/tablero">Tablero</NavLink>
         </nav>
         <div className="sidebar-foot">

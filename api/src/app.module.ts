@@ -11,10 +11,11 @@ import { RolesGuard } from './common/roles.guard';
 import { DatabaseModule } from './database/database.module';
 import { EstadisticasModule } from './estadisticas/estadisticas.module';
 import { HealthModule } from './health/health.module';
+import { MantenimientosModule } from './mantenimientos/mantenimientos.module';
 import { SoportesModule } from './soportes/soportes.module';
 
 @Module({
-  imports: [DatabaseModule, AuthModule, CatalogosModule, SoportesModule, EstadisticasModule, HealthModule],
+  imports: [DatabaseModule, AuthModule, CatalogosModule, SoportesModule, MantenimientosModule, EstadisticasModule, HealthModule],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: JwtAuthGuard },

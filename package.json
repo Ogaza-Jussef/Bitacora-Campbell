@@ -1,0 +1,17 @@
+{
+  "name": "bitacora-campbell",
+  "private": true,
+  "workspaces": [
+    "api",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c green,blue \"npm run start:dev -w api\" \"npm run dev -w web\"",
+    "test": "npm test -w api",
+    "build": "npm run build -w api && npm run build -w web",
+    "sql": "python scripts/generar-sql.py"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

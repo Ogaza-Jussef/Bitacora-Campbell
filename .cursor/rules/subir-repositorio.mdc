@@ -1,0 +1,22 @@
+---
+description: Subir cada cambio pedido al repositorio Bitacora-Campbell
+alwaysApply: true
+---
+
+# Subir cambios a Bitacora-Campbell
+
+Cuando el usuario pida un cambio en este proyecto, el trabajo no está cerrado hasta que ese cambio esté en `https://github.com/Ogaza-Jussef/Bitacora-Campbell.git`, rama `main`.
+
+## Al terminar
+
+1. Revisa que no se vaya `.env`, `database/local/`, contraseñas ni el volcado de soportes con nombres de personas.
+2. Crea un commit con el cambio pedido.
+3. Haz `git push` a `origin main`. Si SSH falla, usa HTTPS.
+4. No esperes un mensaje aparte para commit o push.
+
+## Límites
+
+- No cambies la configuración de git.
+- No uses `--force`, `--no-verify` ni reescribas historia.
+- Si el push falla por permisos, dilo en la respuesta y no lo presentes como subido.
+- El repositorio es público y MySQL escucha en todas las interfaces. La cadena real va en `.env`. En git solo van `.env.example` y el SQL de estructura.

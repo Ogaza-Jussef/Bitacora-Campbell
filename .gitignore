@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.env
+*.xlsx
+*.pdf
+*.docx
+AppWeb TI Code Admin.json
+_logo_extract.png
+database/local/
+api/dist/
+web/dist/
+*.log
+.DS_Store

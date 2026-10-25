@@ -29,10 +29,14 @@ export function LoginPage() {
 
   return (
     <main className="login">
-      <section className="login-card">
-        <img src="/logo-campbell.png" alt="Fundación Campbell" width={168} height={168} />
+      <section className="login-aside">
+        <img src="/logo-campbell.png" alt="Fundación Campbell" width={120} height={120} />
         <h1>Bitácora de Soportes</h1>
-        <p>Registro diario del equipo de tecnología.</p>
+        <p>Área de tecnología de la Fundación Campbell.</p>
+      </section>
+      <section className="login-card">
+        <h2>Entrar</h2>
+        <p>Usa el correo del equipo de soporte.</p>
         <form onSubmit={onSubmit}>
           <label htmlFor="email">Correo</label>
           <input
@@ -56,7 +60,7 @@ export function LoginPage() {
             required
           />
           {error ? <p className="alert" role="alert">{error}</p> : null}
-          <button type="submit" disabled={pending}>{pending ? 'Entrando…' : 'Entrar'}</button>
+          <button className="primary" type="submit" disabled={pending}>{pending ? 'Entrando…' : 'Entrar'}</button>
         </form>
       </section>
     </main>

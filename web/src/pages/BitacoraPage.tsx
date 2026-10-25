@@ -170,7 +170,17 @@ export function BitacoraPage() {
     <>
     <Shell>
       <main className="board">
-        <form className="filters" onSubmit={applyFilters}>
+        <header className="page-head">
+          <div>
+            <h1>Registros</h1>
+            <p className="meta">{loading ? 'Cargando registros…' : `${total} soportes`}</p>
+          </div>
+          <div className="page-actions">
+            <button type="button" onClick={() => openPdf(`/api/v1/soportes/pdf?${queryString(null, applied)}`).catch((caught) => setError(messageOf(caught)))}>Imprimir PDF</button>
+            <button type="button" className="primary" onClick={openCreate}>Nuevo soporte</button>
+          </div>
+        </header>
+        <form className="filters card" onSubmit={applyFilters}>
           <label>Buscar<input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Solicitante o descripción" /></label>
           <label>Área
             <select value={areaId} onChange={(event) => setAreaId(event.target.value)}>
@@ -187,12 +197,9 @@ export function BitacoraPage() {
           <label>Desde<input type="date" value={desde} onChange={(event) => setDesde(event.target.value)} /></label>
           <label>Hasta<input type="date" value={hasta} onChange={(event) => setHasta(event.target.value)} /></label>
           <button type="submit">Filtrar</button>
-          <button type="button" onClick={() => openPdf(`/api/v1/soportes/pdf?${queryString(null, applied)}`).catch((caught) => setError(messageOf(caught)))}>Imprimir PDF</button>
-          <button type="button" className="primary" onClick={openCreate}>Nuevo soporte</button>
         </form>
         {error ? <p className="alert" role="alert">{error}</p> : null}
-        <p className="meta">{loading ? 'Cargando registros…' : `${total} soportes`}</p>
-        <div className="table-wrap">
+        <div className="table-wrap card">
           <table>
             <thead>
               <tr>

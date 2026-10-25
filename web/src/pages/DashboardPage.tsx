@@ -33,7 +33,12 @@ export function DashboardPage() {
   return (
     <Shell>
       <main className="board">
-        <h1>Tablero de soportes</h1>
+        <header className="page-head">
+          <div>
+            <h1>Tablero</h1>
+            <p className="meta">Soportes por periodo, área, tipo y técnico.</p>
+          </div>
+        </header>
         {error ? <p className="alert" role="alert">{error}</p> : null}
         {!data && !error ? <p className="meta">Cargando estadísticas…</p> : null}
         {data ? (

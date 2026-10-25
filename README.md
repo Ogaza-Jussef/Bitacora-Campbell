@@ -39,7 +39,9 @@ Prefijo `/api/v1`.
 | POST | `/soportes` | sesión, acepta `Idempotency-Key` |
 | PUT | `/soportes/:id` | sesión, exige `If-Match` |
 | DELETE | `/soportes/:id` | solo `admin`, exige `If-Match` |
-| GET | `/soportes/export` | sesión, CSV |
+| GET | `/soportes/pdf` | sesión, PDF del filtro activo |
+| GET | `/soportes/:id/pdf` | sesión, PDF de un soporte |
+| GET | `/estadisticas` | sesión, tablero |
 | GET | `/areas` y `/tecnicos` | sesión |
 
 El usuario `bitacora_admin` tiene todos los privilegios sobre la base `bitacora_campbell`. No es administrador de todo el servidor MySQL.

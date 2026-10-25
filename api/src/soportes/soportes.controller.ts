@@ -14,6 +14,22 @@ export class SoportesController {
     return this.soportes.listar(query);
   }
 
+  @Get('pdf')
+  async pdfLista(@Query() query: ListarSoportesDto, @Res() response: Response): Promise<void> {
+    const pdf = await this.soportes.imprimirLista(query);
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader('Content-Disposition', 'inline; filename="bitacora-soportes.pdf"');
+    response.send(pdf);
+  }
+
+  @Get(':id/pdf')
+  async pdfUno(@Param('id') id: string, @Res() response: Response): Promise<void> {
+    const pdf = await this.soportes.imprimirUno(id);
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader('Content-Disposition', `inline; filename="soporte-${id}.pdf"`);
+    response.send(pdf);
+  }
+
   @Get('export')
   async exportar(@Query() query: ListarSoportesDto, @Res() response: Response): Promise<void> {
     const csv = await this.soportes.exportar(query);

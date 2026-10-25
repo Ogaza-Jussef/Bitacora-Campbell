@@ -48,4 +48,12 @@ describe('contrato HTTP', () => {
     expect(response.status).toBe(401);
     expect(response.body.error.code).toBe('unauthenticated');
   });
+
+  it('exige sesión para imprimir y ver el tablero', async () => {
+    const pdf = await request(app.getHttpServer()).get('/api/v1/soportes/pdf');
+    const tablero = await request(app.getHttpServer()).get('/api/v1/estadisticas');
+    expect(pdf.status).toBe(401);
+    expect(tablero.status).toBe(401);
+    expect(pdf.body.error.code).toBe('unauthenticated');
+  });
 });

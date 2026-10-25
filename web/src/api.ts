@@ -48,7 +48,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   return payload as T;
 }
 
-export async function downloadCsv(path: string): Promise<void> {
+export async function openPdf(path: string): Promise<void> {
   const headers = new Headers();
   const token = readToken();
   if (token) {
@@ -57,13 +57,16 @@ export async function downloadCsv(path: string): Promise<void> {
   const response = await fetch(path, { headers });
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    throw new ApiError(response.status, payload?.error?.code ?? 'internal_error', payload?.error?.message ?? 'No se pudo exportar');
+    throw new ApiError(response.status, payload?.error?.code ?? 'internal_error', payload?.error?.message ?? 'No se pudo imprimir el PDF');
   }
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'bitacora-soportes.csv';
-  link.click();
-  URL.revokeObjectURL(url);
+  const opened = window.open(url, '_blank', 'noopener');
+  if (!opened) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'bitacora.pdf';
+    link.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
 }

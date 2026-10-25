@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ApiError, api, downloadCsv } from '../api';
+import { ApiError, api, openPdf } from '../api';
+import { Shell } from '../Shell';
 import { useAuth } from '../auth';
 import type { Catalogo, Page, Soporte, SoporteInput, TipoSoporte } from '../types';
 
@@ -20,7 +21,7 @@ const EMPTY: SoporteInput = {
 };
 
 export function BitacoraPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [areas, setAreas] = useState<Catalogo[]>([]);
   const [tecnicos, setTecnicos] = useState<Catalogo[]>([]);
   const [items, setItems] = useState<Soporte[]>([]);
@@ -167,15 +168,7 @@ export function BitacoraPage() {
 
   return (
     <>
-      <header className="topbar">
-        <img src="/logo-campbell.png" alt="" width={46} height={46} />
-        <div>
-          <strong>Bitácora de Soportes</strong>
-          <span>Fundación Campbell</span>
-        </div>
-        <p>{user?.nombre}</p>
-        <button type="button" className="ghost" onClick={logout}>Salir</button>
-      </header>
+    <Shell>
       <main className="board">
         <form className="filters" onSubmit={applyFilters}>
           <label>Buscar<input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Solicitante o descripción" /></label>
@@ -194,7 +187,7 @@ export function BitacoraPage() {
           <label>Desde<input type="date" value={desde} onChange={(event) => setDesde(event.target.value)} /></label>
           <label>Hasta<input type="date" value={hasta} onChange={(event) => setHasta(event.target.value)} /></label>
           <button type="submit">Filtrar</button>
-          <button type="button" onClick={() => downloadCsv(`/api/v1/soportes/export?${queryString(null, applied)}`).catch((caught) => setError(messageOf(caught)))}>Exportar CSV</button>
+          <button type="button" onClick={() => openPdf(`/api/v1/soportes/pdf?${queryString(null, applied)}`).catch((caught) => setError(messageOf(caught)))}>Imprimir PDF</button>
           <button type="button" className="primary" onClick={openCreate}>Nuevo soporte</button>
         </form>
         {error ? <p className="alert" role="alert">{error}</p> : null}
@@ -226,6 +219,7 @@ export function BitacoraPage() {
                   <td>{soporte.tiempoSoporte}</td>
                   <td>{soporte.tecnico}</td>
                   <td className="actions">
+                    <button type="button" onClick={() => openPdf(`/api/v1/soportes/${soporte.id}/pdf`).catch((caught) => setError(messageOf(caught)))}>PDF</button>
                     <button type="button" onClick={() => openEdit(soporte)}>Editar</button>
                     {user?.rol === 'admin' ? <button type="button" className="danger" onClick={() => remove(soporte)}>Eliminar</button> : null}
                   </td>
@@ -251,6 +245,7 @@ export function BitacoraPage() {
           >Siguiente</button>
         </div>
       </main>
+    </Shell>
       {dialogOpen ? (
         <div className="backdrop" role="presentation">
           <form className="dialog" onSubmit={save} aria-labelledby="form-title">

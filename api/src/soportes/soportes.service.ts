@@ -1,12 +1,13 @@
 import { createHash } from 'crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import type { PoolConnection } from 'mysql2/promise';
+import type { PoolConnection, RowDataPacket } from 'mysql2/promise';
 import { AppError } from '../common/app-error';
 import type { Principal } from '../common/principal';
 import { DatabaseService } from '../database/database.service';
 import { decodeCursor } from './cursor';
 import type { ListarSoportesDto } from './soporte.dto';
 import type { Soporte, SoporteInput } from './soporte';
+import { renderListaPdf, renderSoportePdf } from './pdf';
 import { SoportesRepository } from './soportes.repository';
 
 @Injectable()
@@ -54,6 +55,27 @@ export class SoportesService {
       item.tecnico ?? '',
     ].map(csvCell).join(','));
     return [header.join(','), ...lines].join('\n');
+  }
+
+  async imprimirLista(query: ListarSoportesDto): Promise<Buffer> {
+    this.validarRango(query.desde, query.hasta);
+    const items = await this.soportes.exportar({
+      areaId: query.areaId ?? null,
+      tipo: query.tipo ?? null,
+      desde: query.desde ?? null,
+      hasta: query.hasta ?? null,
+      q: query.q ?? null,
+    });
+    if (items.length > 3000) {
+      throw new AppError('validation_error', 400, 'El filtro supera 3000 soportes. Acota las fechas para imprimir.', [
+        { field: 'desde', reason: 'Demasiados registros' },
+      ]);
+    }
+    return renderListaPdf(items, await this.describirFiltro(query));
+  }
+
+  async imprimirUno(id: string): Promise<Buffer> {
+    return renderSoportePdf(await this.requerir(id));
   }
 
   obtener(id: string): Promise<Soporte> {
@@ -181,6 +203,27 @@ export class SoportesService {
     if (!(await this.soportes.existe(connection, id))) {
       throw new AppError('not_found', 404, 'No se encontró el soporte');
     }
+  }
+
+  private async describirFiltro(query: ListarSoportesDto): Promise<string[]> {
+    const partes: string[] = [];
+    if (query.q) {
+      partes.push(`Búsqueda: ${query.q}`);
+    }
+    if (query.areaId) {
+      const rows = await this.db.query<RowDataPacket & { nombre: string }>(
+        'SELECT nombre FROM areas WHERE id = ? LIMIT 1',
+        [query.areaId],
+      );
+      partes.push(`Área: ${rows[0]?.nombre ?? String(query.areaId)}`);
+    }
+    if (query.tipo) {
+      partes.push(`Tipo: ${query.tipo}`);
+    }
+    if (query.desde || query.hasta) {
+      partes.push(`Fechas: ${query.desde ?? 'inicio'} a ${query.hasta ?? 'hoy'}`);
+    }
+    return partes;
   }
 
   private validarRango(desde?: string, hasta?: string): void {

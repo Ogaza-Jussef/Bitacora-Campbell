@@ -1,17 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ApiError, api } from '../api';
 import { Shell } from '../Shell';
-import { ColumnasPeriodo } from '../components/dashboard/ColumnasPeriodo';
-import { DonutTipos } from '../components/dashboard/DonutTipos';
 import { Icono } from '../components/dashboard/Icono';
 import { KpiCard } from '../components/dashboard/KpiCard';
-import { RankingBarras } from '../components/dashboard/RankingBarras';
-import { SerieTemporal } from '../components/dashboard/SerieTemporal';
 import {
   areaLider,
   diaPico,
   fechaLarga,
-  mesCorto,
   numero,
   suma,
   variacion,
@@ -26,7 +21,6 @@ export function DashboardPage() {
   const [data, setData] = useState<Estadisticas | null>(null);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(true);
-  const [verAreas, setVerAreas] = useState(false);
   const [animar, setAnimar] = useState(true);
 
   useEffect(() => {
@@ -55,7 +49,6 @@ export function DashboardPage() {
   const promedioAnterior = anterior.treinta / 30;
   const pico = data ? diaPico(data.porDia) : null;
   const lider = data ? areaLider(data.porArea) : null;
-  const areasVisibles = data ? (verAreas ? data.porArea.filter((punto) => punto.total > 0) : data.porArea.filter((punto) => punto.total > 0).slice(0, 10)) : [];
 
   return (
     <Shell>
@@ -80,36 +73,6 @@ export function DashboardPage() {
             <KpiCard etiqueta="Promedio diario" valor={numero.format(Math.round(promedio))} detalle="Media de los últimos 30 días" delta={variacion(promedio, promedioAnterior)} comparacion="vs los 30 previos" serie={data.porDia} icono={<Icono nombre="promedio" />} animar={animar} />
             <KpiCard etiqueta="Día pico" valor={pico ? numero.format(pico.total) : '0'} detalle={pico ? fechaLarga(pico.etiqueta) : 'Sin datos'} delta={pico ? variacion(pico.total, promedio) : 0} comparacion="vs el promedio diario" serie={data.porDia} icono={<Icono nombre="pico" />} animar={animar} />
             <KpiCard etiqueta="Área con más soportes" valor={lider ? lider.etiqueta : 'Sin datos'} detalle={lider ? `${numero.format(lider.total)} soportes, ${numero.format(data.total > 0 ? Math.round((lider.total / data.total) * 100) : 0)}% del total` : 'Sin datos'} delta={null} comparacion="" serie={topSerie(data.porArea)} icono={<Icono nombre="area" />} animar={animar} />
-            <div className="span-8">
-              <SerieTemporal titulo="Por día" descripcion="Últimos 30 días." puntos={data.porDia} animar={animar} />
-            </div>
-            <div className="span-4">
-              <SerieTemporal titulo="Por semana" descripcion="Últimas 12 semanas." puntos={data.porSemana} animar={animar} />
-            </div>
-            <div className="span-6">
-              <ColumnasPeriodo titulo="Por mes" descripcion="Últimos 12 meses. El mes actual va en verde oscuro." puntos={data.porMes} actual={data.fecha.slice(0, 7)} formatear={mesCorto} animar={animar} />
-            </div>
-            <div className="span-6">
-              <ColumnasPeriodo titulo="Por año" descripcion="Año actual resaltado." puntos={data.porAnio} actual={data.fecha.slice(0, 4)} formatear={(valor) => valor} animar={animar} />
-            </div>
-            <div className="span-7">
-              <RankingBarras
-                titulo={verAreas ? 'Todas las áreas' : 'Áreas, top 10'}
-                descripcion="Participación sobre el total de soportes."
-                puntos={areasVisibles}
-                total={data.total}
-                animar={animar}
-                mostrarPorcentaje
-                accion={<button type="button" onClick={() => setVerAreas((valor) => !valor)}>{verAreas ? 'Ver top 10' : 'Ver todas'}</button>}
-              />
-            </div>
-            <div className="span-5">
-              <DonutTipos puntos={data.porTipo} animar={animar} />
-            </div>
-            <div className="span-12">
-              <RankingBarras titulo="Por técnico" descripcion="Ranking de soportes atendidos." puntos={data.porTecnico.filter((punto) => punto.total > 0)} total={data.total} animar={animar} />
-            </div>
-            <MantenimientoResumen />
           </div>
         ) : null}
       </main>
@@ -121,48 +84,10 @@ function topSerie(puntos: Punto[]): Punto[] {
   return [...puntos].filter((punto) => punto.total > 0).slice(0, 8).reverse();
 }
 
-function MantenimientoResumen() {
-  const [datos, setDatos] = useState<{
-    preventivos: { programados: number; realizados: number; noRealizados: number; cumplimiento: number };
-    correctivos: { abiertos: number; resueltos: number };
-  } | null>(null);
-  const [falla, setFalla] = useState('');
-
-  useEffect(() => {
-    api<{
-      preventivos: { programados: number; realizados: number; noRealizados: number; cumplimiento: number };
-      correctivos: { abiertos: number; resueltos: number };
-    }>('/api/v1/mantenimientos/resumen')
-      .then(setDatos)
-      .catch((caught) => setFalla(caught instanceof ApiError ? caught.message : 'No se pudieron cargar los mantenimientos'));
-  }, []);
-
-  if (falla) return <p className="alert span-12" role="alert">{falla}</p>;
-  if (!datos) return null;
-  return (
-    <>
-      <article className="chart-card span-6" aria-label="Preventivos del mes">
-        <h2>Preventivos del mes</h2>
-        <p className="meta">Programados {numero.format(datos.preventivos.programados)} · Realizados {numero.format(datos.preventivos.realizados)} · No realizados {numero.format(datos.preventivos.noRealizados)}</p>
-        <p className="kpi-valor">{numero.format(datos.preventivos.cumplimiento)}%</p>
-        <p className="meta">Cumplimiento del mes</p>
-      </article>
-      <article className="chart-card span-6" aria-label="Correctivos abiertos y resueltos">
-        <h2>Correctivos</h2>
-        <p className="meta">Abiertos {numero.format(datos.correctivos.abiertos)} · Resueltos {numero.format(datos.correctivos.resueltos)}</p>
-        <p className="kpi-valor">{numero.format(datos.correctivos.abiertos)}</p>
-        <p className="meta">Abiertos ahora</p>
-      </article>
-    </>
-  );
-}
-
 function Skeleton() {
   return (
     <div className="tablero-grid" aria-hidden="true">
       {Array.from({ length: 8 }, (_, indice) => <div key={indice} className="kpi-card skeleton" />)}
-      <div className="span-8 chart-card skeleton" />
-      <div className="span-4 chart-card skeleton" />
     </div>
   );
 }

@@ -3,119 +3,204 @@ import { join } from 'path';
 import PDFDocument from 'pdfkit';
 import type { Soporte } from './soporte';
 
-const MARGIN = 36;
+const MARGIN = 22;
+const LOGO_WIDTH = 78;
+const META_WIDTH = 168;
+const HEADER_BODY = 76;
+const COLUMN_HEADER = 28;
+
+const COLUMNAS = [
+  { titulo: 'NOMBRE DE USUARIO', peso: 0.154 },
+  { titulo: 'AREA', peso: 0.15 },
+  { titulo: 'SOLICITUD', peso: 0.192 },
+  { titulo: 'FECHA DE SOLICITUD', peso: 0.127 },
+  { titulo: 'FECHA DE ENTREGA', peso: 0.122 },
+  { titulo: 'TIEMPO DE SOPORTE', peso: 0.128 },
+  { titulo: 'REALIZADO POR', peso: 0.127 },
+] as const;
 
 export async function renderListaPdf(items: Soporte[], filtros: string[]): Promise<Buffer> {
-  const doc = createDocument('landscape');
+  return renderFormulario(items, filtros, false);
+}
+
+export async function renderSoportePdf(item: Soporte): Promise<Buffer> {
+  return renderFormulario([item], [], true);
+}
+
+async function renderFormulario(items: Soporte[], filtros: string[], completo: boolean): Promise<Buffer> {
+  const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: MARGIN });
   const regular = requiredAsset('fonts/NotoSans-Regular.ttf');
   const bold = requiredAsset('fonts/NotoSans-Bold.ttf');
   const logo = optionalAsset('logo-campbell.png');
-  let y = drawHeader(doc, regular, bold, logo, 'Bitácora de Soportes', filtros.join(' · ') || 'Todos los registros');
+  const widths = anchos(doc.page.width - MARGIN * 2);
+  let pagina = 1;
+  let y = dibujarEncabezado(doc, regular, bold, logo, pagina, filtros, widths);
 
-  const columns = [
-    { title: 'Solicitante', width: 100 },
-    { title: 'Área', width: 95 },
-    { title: 'Descripción', width: 210 },
-    { title: 'Tipo', width: 78 },
-    { title: 'Solicitud', width: 68 },
-    { title: 'Entrega', width: 68 },
-    { title: 'Tiempo', width: 58 },
-    { title: 'Realizado por', width: 90 },
-  ];
-
-  const drawTableHeader = () => {
-    doc.font(bold).fontSize(8).fillColor('#0f6b3c');
-    let x = MARGIN;
-    for (const column of columns) {
-      doc.text(column.title, x, y, { width: column.width, lineBreak: false });
-      x += column.width;
-    }
-    y += 16;
-    doc.moveTo(MARGIN, y).lineTo(doc.page.width - MARGIN, y).strokeColor('#d7e4dc').stroke();
-    y += 6;
-  };
-
-  drawTableHeader();
-  doc.font(regular).fontSize(8).fillColor('#1c2b24');
-
+  doc.font(regular).fontSize(8);
   if (items.length === 0) {
-    doc.text('No hay soportes con el filtro seleccionado.', MARGIN, y);
+    const alto = 22;
+    dibujarFila(doc, regular, ['Sin registros para el filtro seleccionado', '', '', '', '', '', ''], y, widths, alto, false);
   }
 
   for (const item of items) {
-    const values = [
+    const valores = [
       item.solicitante,
       item.area,
-      recortar(item.descripcion ?? '', 110),
-      etiquetaTipo(item.tipo),
+      solicitud(item, completo),
       formatoFecha(item.fechaSolicitud),
       formatoFecha(item.fechaEntrega),
       item.tiempoSoporte ?? '',
       item.tecnico ?? '',
     ];
-    const height = Math.max(...values.map((value, index) => doc.heightOfString(value, { width: columns[index].width }))) + 6;
-    if (y + height > doc.page.height - MARGIN) {
+    doc.font(regular).fontSize(8);
+    const alto = Math.max(
+      18,
+      ...valores.map((valor, indice) => doc.heightOfString(valor || ' ', { width: widths[indice] - 6 }) + 8),
+    );
+    if (y + alto > doc.page.height - MARGIN) {
       doc.addPage();
-      y = drawHeader(doc, regular, bold, logo, 'Bitácora de Soportes', filtros.join(' · ') || 'Todos los registros');
-      drawTableHeader();
-      doc.font(regular).fontSize(8).fillColor('#1c2b24');
+      pagina += 1;
+      y = dibujarEncabezado(doc, regular, bold, logo, pagina, filtros, widths);
+      doc.font(regular).fontSize(8);
     }
-    let x = MARGIN;
-    values.forEach((value, index) => {
-      doc.text(value, x, y, { width: columns[index].width });
-      x += columns[index].width;
-    });
-    y += height;
+    dibujarFila(doc, regular, valores, y, widths, alto, false);
+    y += alto;
   }
 
-  doc.font(regular).fontSize(8).fillColor('#52685c').text(`${items.length} soportes`, MARGIN, doc.page.height - 28, { lineBreak: false });
   return finish(doc);
 }
 
-export async function renderSoportePdf(item: Soporte): Promise<Buffer> {
-  const doc = createDocument('portrait');
-  const regular = requiredAsset('fonts/NotoSans-Regular.ttf');
-  const bold = requiredAsset('fonts/NotoSans-Bold.ttf');
-  const logo = optionalAsset('logo-campbell.png');
-  let y = drawHeader(doc, regular, bold, logo, 'Soporte individual', `Registro ${item.id}`);
-  const fields: [string, string][] = [
-    ['Solicitante', item.solicitante],
-    ['Área', item.area],
-    ['Tipo de soporte', etiquetaTipo(item.tipo)],
-    ['Descripción', item.descripcion ?? ''],
-    ['Fecha de solicitud', formatoFecha(item.fechaSolicitud)],
-    ['Fecha de entrega', formatoFecha(item.fechaEntrega)],
-    ['Tiempo de soporte', item.tiempoSoporte ?? ''],
-    ['Realizado por', item.tecnico ?? ''],
-  ];
-  for (const [label, value] of fields) {
-    doc.font(bold).fontSize(10).fillColor('#0f6b3c').text(label, MARGIN, y);
-    y = doc.y + 2;
-    doc.font(regular).fontSize(12).fillColor('#1c2b24').text(value || '—', MARGIN, y, { width: doc.page.width - MARGIN * 2 });
-    y = doc.y + 12;
-  }
-  return finish(doc);
-}
-
-function createDocument(layout: 'portrait' | 'landscape'): PDFKit.PDFDocument {
-  return new PDFDocument({ size: 'A4', layout, margin: MARGIN });
-}
-
-function drawHeader(
+function dibujarEncabezado(
   doc: PDFKit.PDFDocument,
   regular: string,
   bold: string,
   logo: string | null,
-  title: string,
-  subtitle: string,
+  pagina: number,
+  filtros: string[],
+  widths: number[],
 ): number {
+  const x = MARGIN;
+  const y = MARGIN;
+  const total = widths.reduce((suma, ancho) => suma + ancho, 0);
+  const centro = total - LOGO_WIDTH - META_WIDTH;
+  doc.lineWidth(0.7).strokeColor('#000000');
+
+  celda(doc, '', x, y, LOGO_WIDTH, HEADER_BODY);
   if (logo) {
-    doc.image(logo, MARGIN, 24, { height: 34 });
+    doc.image(logo, x + 12, y + 12, { fit: [54, 52], align: 'center', valign: 'center' });
   }
-  doc.font(bold).fontSize(16).fillColor('#1c2b24').text(title, MARGIN + 48, 26, { lineBreak: false });
-  doc.font(regular).fontSize(9).fillColor('#52685c').text(subtitle, MARGIN + 48, 48, { width: doc.page.width - MARGIN * 2 - 48 });
-  doc.moveTo(MARGIN, 68).lineTo(doc.page.width - MARGIN, 68).strokeColor('#0f6b3c').stroke();
-  return 80;
+
+  celda(doc, '', x + LOGO_WIDTH, y, centro, HEADER_BODY);
+  doc.font(bold).fontSize(12).fillColor('#000000');
+  doc.text('BITÁCORA DE SOPORTES', x + LOGO_WIDTH + 8, y + 16, { width: centro - 16, align: 'center' });
+  doc.font(bold).fontSize(9);
+  doc.text('PROCESO: SOPORTE PARA LA PRESTACION DE SERVICIOS', x + LOGO_WIDTH + 8, y + 36, {
+    width: centro - 16,
+    align: 'center',
+  });
+  if (filtros.length > 0) {
+    doc.font(regular).fontSize(8);
+    doc.text(filtros.join('  ·  '), x + LOGO_WIDTH + 8, y + 54, { width: centro - 16, align: 'center' });
+  }
+
+  const metaX = x + LOGO_WIDTH + centro;
+  const etiqueta = 92;
+  const filas: [string, string][] = [
+    ['Código:', 'FO-AF-034'],
+    ['Versión:', '01'],
+    ['Vigencia desde:', '2023-01-17'],
+    ['Página:', String(pagina)],
+  ];
+  filas.forEach(([nombre, valor], indice) => {
+    const filaY = y + indice * (HEADER_BODY / 4);
+    const alto = HEADER_BODY / 4;
+    celda(doc, nombre, metaX, filaY, etiqueta, alto, { font: regular, size: 8, align: 'left' });
+    celda(doc, valor, metaX + etiqueta, filaY, META_WIDTH - etiqueta, alto, { font: bold, size: 8, align: 'left' });
+  });
+
+  let columnaX = x;
+  const encabezadoY = y + HEADER_BODY;
+  widths.forEach((ancho, indice) => {
+    celda(doc, COLUMNAS[indice].titulo, columnaX, encabezadoY, ancho, COLUMN_HEADER, {
+      font: bold,
+      size: 7,
+      align: 'center',
+    });
+    columnaX += ancho;
+  });
+  return encabezadoY + COLUMN_HEADER;
+}
+
+function dibujarFila(
+  doc: PDFKit.PDFDocument,
+  font: string,
+  valores: string[],
+  y: number,
+  widths: number[],
+  alto: number,
+  centrado: boolean,
+): void {
+  let x = MARGIN;
+  valores.forEach((valor, indice) => {
+    celda(doc, valor, x, y, widths[indice], alto, {
+      font,
+      size: 8,
+      align: centrado ? 'center' : 'left',
+    });
+    x += widths[indice];
+  });
+}
+
+function celda(
+  doc: PDFKit.PDFDocument,
+  texto: string,
+  x: number,
+  y: number,
+  ancho: number,
+  alto: number,
+  opciones?: { font?: string; size?: number; align?: 'left' | 'center' },
+): void {
+  doc.rect(x, y, ancho, alto).stroke();
+  if (!texto || !opciones?.font) {
+    return;
+  }
+  doc.font(opciones.font).fontSize(opciones.size ?? 8).fillColor('#000000');
+  const padding = 3;
+  doc.text(texto, x + padding, y + padding, {
+    width: ancho - padding * 2,
+    height: alto - padding * 2,
+    align: opciones.align ?? 'left',
+  });
+}
+
+function anchos(total: number): number[] {
+  const crudos = COLUMNAS.map((columna) => Math.floor(total * columna.peso));
+  const diferencia = total - crudos.reduce((suma, ancho) => suma + ancho, 0);
+  crudos[crudos.length - 1] += diferencia;
+  return crudos;
+}
+
+function solicitud(item: Soporte, completo: boolean): string {
+  const tipo = etiquetaTipo(item.tipo);
+  const descripcion = (item.descripcion ?? '').replace(/\s+/g, ' ').trim();
+  const texto = tipo && descripcion ? `${tipo}. ${descripcion}` : tipo || descripcion;
+  if (completo || texto.length <= 180) {
+    return texto;
+  }
+  return `${texto.slice(0, 179)}…`;
+}
+
+function formatoFecha(value: string | null): string {
+  if (!value) {
+    return '';
+  }
+  const [year, month, day] = value.slice(0, 10).split('-');
+  return year && month && day ? `${day}/${month}/${year}` : value;
+}
+
+function etiquetaTipo(tipo: Soporte['tipo']): string {
+  if (tipo === 'Chequeo') return 'Asesoría, visita, chequeo';
+  return tipo ?? '';
 }
 
 function finish(doc: PDFKit.PDFDocument): Promise<Buffer> {
@@ -143,22 +228,4 @@ function requiredAsset(name: string): string {
     throw new Error(`No se encontró el archivo ${name}`);
   }
   return found;
-}
-
-function recortar(value: string, max: number): string {
-  const text = value.replace(/\s+/g, ' ').trim();
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
-}
-
-function formatoFecha(value: string | null): string {
-  if (!value) {
-    return '';
-  }
-  const [year, month, day] = value.slice(0, 10).split('-');
-  return year && month && day ? `${day}/${month}/${year}` : value;
-}
-
-function etiquetaTipo(tipo: Soporte['tipo']): string {
-  if (tipo === 'Chequeo') return 'Asesoría, visita, chequeo';
-  return tipo ?? '';
 }

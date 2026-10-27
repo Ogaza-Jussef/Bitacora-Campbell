@@ -5,6 +5,7 @@ import { useAuth } from '../auth';
 import { BadgeEstado } from '../components/mantenimientos/BadgeEstado';
 import { CalendarioMes } from '../components/mantenimientos/CalendarioMes';
 import { EquipoCampo } from '../components/mantenimientos/EquipoCampo';
+import { FILTROS_MANT_VACIOS, FiltrosMantenimiento, hayFiltrosMant } from '../components/mantenimientos/FiltrosMantenimiento';
 import { fechaVisible, numero } from '../components/registros/format';
 import type { Catalogo, Page } from '../types';
 
@@ -33,12 +34,8 @@ export function PreventivosPage() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [anterior, setAnterior] = useState<(string | null)[]>([null]);
   const [indice, setIndice] = useState(0);
-  const [areaId, setAreaId] = useState('');
-  const [estado, setEstado] = useState('');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
-  const [q, setQ] = useState('');
-  const [filtros, setFiltros] = useState({ areaId: '', estado: '', desde: '', hasta: '', q: '' });
+  const [valores, setValores] = useState(FILTROS_MANT_VACIOS);
+  const [filtros, setFiltros] = useState(FILTROS_MANT_VACIOS);
   const [vista, setVista] = useState<'tabla' | 'calendario'>('tabla');
   const [anio, setAnio] = useState(hoy.getFullYear());
   const [mes, setMes] = useState(hoy.getMonth() + 1);
@@ -96,12 +93,17 @@ export function PreventivosPage() {
     return () => window.removeEventListener('keydown', cerrar);
   }, [abierto]);
 
-  function filtrar(event: FormEvent) {
-    event.preventDefault();
-    setFiltros({ areaId, estado, desde, hasta, q });
+  function aplicar(siguiente: typeof FILTROS_MANT_VACIOS) {
+    setValores(siguiente);
+    setFiltros(siguiente);
     setCursor(null);
     setIndice(0);
     setAnterior([null]);
+  }
+
+  function filtrar(event: FormEvent) {
+    event.preventDefault();
+    aplicar(valores);
   }
 
   async function guardar(event: FormEvent) {
@@ -171,14 +173,18 @@ export function PreventivosPage() {
             <button type="button" className="primary" onClick={() => { setEditando(null); setForm(VACIO); setClave(crypto.randomUUID()); setAbierto(true); }}>Nuevo preventivo</button>
           </div>
         </header>
-        <form className="filtros-bar card" onSubmit={filtrar}>
-          <label>Buscar<input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Equipo u observación" aria-label="Buscar preventivo" /></label>
-          <label>Área<select value={areaId} aria-label="Área" onChange={(event) => setAreaId(event.target.value)}><option value="">Todas</option>{areas.map((area) => <option key={area.id} value={area.id}>{area.nombre}</option>)}</select></label>
-          <label>Estado<select value={estado} aria-label="Estado" onChange={(event) => setEstado(event.target.value)}><option value="">Todos</option>{ESTADOS.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label>Desde<input type="date" value={desde} aria-label="Desde" onChange={(event) => setDesde(event.target.value)} /></label>
-          <label>Hasta<input type="date" value={hasta} aria-label="Hasta" onChange={(event) => setHasta(event.target.value)} /></label>
-          <button type="submit">Filtrar</button>
-        </form>
+        <FiltrosMantenimiento
+          valores={valores}
+          aplicados={filtros}
+          areas={areas}
+          estados={ESTADOS}
+          placeholder="Equipo u observación"
+          etiqueta="Filtros de preventivos"
+          onChange={setValores}
+          onFiltrar={filtrar}
+          onLimpiar={() => aplicar(FILTROS_MANT_VACIOS)}
+          onQuitar={aplicar}
+        />
         {vista === 'calendario' ? (
           <div>
             <div className="page-actions">
@@ -191,7 +197,12 @@ export function PreventivosPage() {
         ) : null}
         {error ? <p className="alert" role="alert">{error}</p> : null}
         {cargando ? <div className="card"><div className="fila-skeleton" /></div> : null}
-        {!cargando && items.length === 0 ? <div className="card vacio-registros"><p>Sin resultados</p></div> : null}
+        {!cargando && items.length === 0 ? (
+          <div className="card vacio-registros">
+            <p>Sin resultados</p>
+            {hayFiltrosMant(filtros) ? <button type="button" onClick={() => aplicar(FILTROS_MANT_VACIOS)}>Limpiar filtros</button> : null}
+          </div>
+        ) : null}
         {!cargando && items.length > 0 && vista === 'tabla' ? (
           <div className="card table-wrap">
             <table className="registros-table">

@@ -66,14 +66,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   border-radius: var(--radio);
   box-shadow: 0 1px 2px rgba(18, 36, 27, 0.04);
 }
-.filtros-card { display: grid; gap: 0.75rem; padding: 0.85rem; }
+.filtros-card { display: grid; gap: 0.75rem; padding: 1rem 1.1rem; }
 .filtros-bar {
   display: grid;
-  grid-template-columns: minmax(180px, 1.7fr) minmax(120px, 1fr) minmax(110px, 0.8fr) 146px 146px auto;
-  gap: 0.65rem;
+  grid-template-columns: minmax(200px, 1.7fr) minmax(140px, 1fr) minmax(130px, 0.9fr) minmax(138px, 150px) minmax(138px, 150px) auto;
+  gap: 0.75rem 0.85rem;
   align-items: end;
 }
-.filtros-acciones { display: flex; gap: 0.4rem; }
+.filtros-acciones { display: flex; gap: 0.45rem; align-items: stretch; }
+.filtros-acciones button { white-space: nowrap; height: 42px; }
 .busqueda span { position: relative; display: block; }
 .busqueda svg {
   position: absolute;
@@ -142,6 +143,7 @@ label.invalido input, label.invalido select, label.invalido textarea { border-co
 .alerta-campo { margin: 0; color: #8d1d1d; }
 @media (max-width: 1100px) {
   .filtros-bar { grid-template-columns: 1fr 1fr 1fr; }
+  .filtros-acciones { grid-column: 1 / -1; justify-content: flex-end; }
 }
 @media (max-width: 760px) {
   .filtros-bar, .filtros-acciones { grid-template-columns: 1fr; }
